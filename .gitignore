@@ -1,0 +1,11 @@
+creds.py
+notebooks/
+tabulize.egg-info/
+tabulize/__pycache__/
+dist/
+data/
+build/
+.vscode/
+.ipynb_checkpoints/
+__pycache__/
+tests/__pycache__/
