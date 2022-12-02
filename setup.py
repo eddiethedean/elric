@@ -7,8 +7,8 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="tabulize",
-    version="0.0.1",
-    description="Make changes to sql tables using SqlAlchmey and alembic",
+    version="0.0.2",
+    description="Make changes to sql tables using a Table object with SqlAlchmey and alembic back end.",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/eddiethedean/tabulize",
@@ -23,5 +23,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     python_requires='>=3.9',
-    install_requires=['SQLAlchemy>=1.4', 'alembic>=1.7.5', 'chaingang']
+    install_requires=['tinytable', 'alterize', 'sessionize', 'sqlalchemize>=0.0.3']
 )
