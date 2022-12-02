@@ -20,7 +20,6 @@ class SqlTable(Table):
         data: Mapping[str, Sequence] = {},
         schema: Optional[str] = None
     ) -> None:
-        super().__init__()
         self.name: str = name
         self.engine: Engine = engine
         self.schema: None | str = schema
