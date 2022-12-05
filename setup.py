@@ -7,7 +7,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="tabulize",
-    version="0.0.2",
+    version="0.0.3",
     description="Make changes to sql tables using a Table object with SqlAlchmey and alembic back end.",
     long_description=README,
     long_description_content_type="text/markdown",
