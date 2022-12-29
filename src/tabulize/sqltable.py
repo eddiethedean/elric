@@ -1,4 +1,4 @@
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 import tinytim.data as ttdata
 import tinytim.rows as ttrows
@@ -30,33 +30,51 @@ class SqlTable(Table):
         if self.old_data == {}:
             self.old_data = {col: [] for col in self.old_column_names}
         super().__init__(self.old_data)
+
+    def name_changed(self) -> bool:
+        return self.old_name != self.name
+
+    def change_name(self) -> None:
+        """Change the name of the sql table to match current name."""
+        alt.rename_table(self.old_name, self.name, self.engine)
+
+    def missing_columns(self) -> set[str]:
+        """Check for missing columns in data that are in sql table"""
+        return set(self.old_column_names) - set(self.columns)
+
+    def delete_columns(self, columns: Iterable[str]) -> None:
+        for col_name in columns:
+            alt.drop_column(self.name, col_name, self.engine)
+
+    def extra_columns(self) -> set[str]:
+        """Check for extra columns in data that are not in sql table"""
+        return set(self.columns) - set(self.old_column_names)
+
+    def create_column(self, column_name: str) -> None:
+        """Create columns in sql table that are in data"""
+        dtype = sz.type_convert.get_sql_type(self.data[column_name])
+        alt.add_column(self.name, column_name, dtype, self.engine)
+
+    def create_columns(self, column_names: Iterable[str]) -> None:
+        """Create a column in sql table that is in data"""
+        for col_name in column_names:
+            self.create_column(col_name)
         
     def push(self) -> None:
         """
-        Push any data changes to sql database table.
+        Push any data changes to sql database table
         """
-        # Check if table name changed
-        if self.old_name != self.name:
-            # yes: change name of table
-            alt.rename_table(self.old_name, self.name, self.engine)
+        if self.name_changed():
+            self.change_name()
                 
-        # Check for missing column names
-        missing_cols = set(self.old_column_names) - set(self.columns)
-        if missing_cols:
-            # yes: delete columns from sql table
-            for col_name in missing_cols:
-                alt.drop_column(self.name, col_name, self.engine)
+        missing_columns = self.missing_columns()
+        if missing_columns:
+            self.delete_columns(missing_columns)
 
-        # Check for extra column names
-        extra_cols = set(self.columns) - set(self.old_column_names)
-        if extra_cols:
-            # yes: create new columns
-            for col_name in extra_cols:
-                # get column type
-                dtype = sz.type_convert.get_sql_type(self.data[col_name])
-                # create columns
-                alt.add_column(self.name, col_name, dtype, self.engine)
-                
+        extra_columns = self.extra_columns()
+        if extra_columns:
+            self.create_columns(extra_columns)
+            
         # Check if data types match
             # no: change data types of columns
             
