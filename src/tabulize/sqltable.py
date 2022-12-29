@@ -6,6 +6,8 @@ from tinytable import Table
 
 import sqlalchemy as sa
 import sqlalchemize as sz
+import alterize as alt
+import tinytim as tt
 
 Engine = sa.engine.Engine
 
@@ -34,13 +36,26 @@ class SqlTable(Table):
         Push any data changes to sql database table.
         """
         # Check if table name changed
+        if self.old_name != self.name:
             # yes: change name of table
+            alt.rename_table(self.old_name, self.name, self.engine)
                 
         # Check for missing column names
+        missing_cols = set(self.old_column_names) - set(self.columns)
+        if missing_cols:
             # yes: delete columns from sql table
-                
+            for col_name in missing_cols:
+                alt.drop_column(self.name, col_name, self.engine)
+
         # Check for extra column names
+        extra_cols = set(self.columns) - set(self.old_column_names)
+        if extra_cols:
             # yes: create new columns
+            for col_name in extra_cols:
+                # get column type
+                dtype = sz.type_convert.get_sql_type(self.data[col_name])
+                # create columns
+                alt.add_column(self.name, col_name, dtype, self.engine)
                 
         # Check if data types match
             # no: change data types of columns
