@@ -1,0 +1,4 @@
+tinytable
+alterize
+sessionize
+sqlalchemize>=0.0.3

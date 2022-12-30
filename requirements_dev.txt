@@ -1,0 +1,5 @@
+flake8==3.9.2
+tox==3.24.3
+mypy===0.910
+testing.postgresql
+psycopg2-binary
