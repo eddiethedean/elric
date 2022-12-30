@@ -1,4 +1,5 @@
-from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Protocol
+from dataclasses import dataclass
 
 import tinytim.data as ttdata
 import tinytim.rows as ttrows
@@ -11,11 +12,18 @@ import tinytim as tt
 
 Engine = sa.engine.Engine
 
+@dataclass
+class iTable:
+    data: Mapping[str, Sequence]
+    columns: Sequence[str]
 
-class SqlTable(Table):
-    def __init__(self, name: str, engine: sa.engine.Engine):
+
+
+class SqlTable:
+    def __init__(self, name: str, engine: sa.engine.Engine, table: iTable):
         self.name = name
         self.engine = engine
+        self.table = table
         self.pull()
         
     def pull(self) -> None:
@@ -25,11 +33,12 @@ class SqlTable(Table):
         self.old_data = ttrows.row_dicts_to_data(records)
         self.old_column_names = sz.features.get_column_names(sqltable)
         self.old_column_types = sz.features.get_column_types(sqltable)
-        self.old_primary_keys = sz.features.get_primary_key_constraints(sqltable)
+        self.old_primary_keys = sz.features.primary_key_names(sqltable)
+        self.primary_keys = list(self.old_primary_keys)
         self.old_name = self.name
         if self.old_data == {}:
             self.old_data = {col: [] for col in self.old_column_names}
-        super().__init__(self.old_data)
+        self.table.__init__(self.old_data, self.old_column_names)
 
     def name_changed(self) -> bool:
         return self.old_name != self.name
@@ -40,7 +49,7 @@ class SqlTable(Table):
 
     def missing_columns(self) -> set[str]:
         """Check for missing columns in data that are in sql table"""
-        return set(self.old_column_names) - set(self.columns)
+        return set(self.old_column_names) - set(self.table.columns)
 
     def delete_columns(self, columns: Iterable[str]) -> None:
         for col_name in columns:
@@ -59,6 +68,14 @@ class SqlTable(Table):
         """Create a column in sql table that is in data"""
         for col_name in column_names:
             self.create_column(col_name)
+
+    def primary_keys_different(self) -> bool:
+        return set(self.old_primary_keys) != set(self.primary_keys)
+
+    def set_primary_keys(self, column_names: Iterable[str]) -> None:
+        for name in column_names:
+            alt.replace_primary_key()
+            alt.create_primary_key()
         
     def push(self) -> None:
         """
@@ -79,7 +96,9 @@ class SqlTable(Table):
             # no: change data types of columns
             
         # Check if primary keys are the same
+        if self.primary_keys_different():
             # no: change primary keys
+            ...
             
         # Check for new primary key records
             # yes: insert new records
