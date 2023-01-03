@@ -159,7 +159,13 @@ class SqlTable:
 
     def update_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
-        sz.update.update_records(sa_table, records, self.engine)
+        session = sa_session.Session(self.engine)
+        try:
+            sz.update.update_records_fast_session(sa_table, records, session)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         
     def push(self, table: iTable) -> None:
         """
@@ -192,9 +198,9 @@ class SqlTable:
         if missing_records:
             self.delete_records(missing_records)
           
-        # matching_pk_records = self.matching_pk_records(table)
-        # if matching_pk_records:
-            # self.update_records(matching_pk_records)
+        matching_pk_records = self.matching_pk_records(table)
+        if matching_pk_records:
+            self.update_records(matching_pk_records)
 
 
 def table_records(table: iTable) -> list[dict]:
