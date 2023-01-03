@@ -151,7 +151,7 @@ class SqlTable:
 
     def delete_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
-        delete_records_by_values(sa_table, self.engine, records)
+        sz.delete.delete_records_by_values(sa_table, self.engine, records)
 
     def insert_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
@@ -191,28 +191,15 @@ class SqlTable:
         missing_records = self.missing_records(table)
         if missing_records:
             self.delete_records(missing_records)
-            
-        matching_pk_records = self.matching_pk_records(table)
-        if matching_pk_records:
-            self.update_records(matching_pk_records)
+          
+        # matching_pk_records = self.matching_pk_records(table)
+        # if matching_pk_records:
+            # self.update_records(matching_pk_records)
 
 
 def table_records(table: iTable) -> list[dict]:
     return [dict(row) for _, row in table.iterrows()]
 
-
-def delete_records_by_values(
-    sa_table: sa.Table,
-    engine: Engine,
-    records: list[dict]
-) -> None:
-    session = sa_session.Session(engine)
-    try:
-        sz.delete.delete_records_by_values_session(sa_table, records, session)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        raise e
 
 """
 def read_sql_data(
