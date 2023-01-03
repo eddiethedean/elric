@@ -149,6 +149,16 @@ class SqlTable:
         matching_pk_records = self.pk_records_from_tuples(matching_pk_tuples)
         return self.full_current_records_from_pk_records(matching_pk_records, table)
 
+    def changed_records(self, table, records) -> list[dict]:
+        """
+        Compare table's records to passed records.
+        Return records that have been changed.
+
+        Checks primary key values to find matches
+        then compares the rest of the record's values for changes.
+        """
+        ...
+
     def delete_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
         sz.delete.delete_records_by_values(sa_table, self.engine, records)
@@ -159,13 +169,7 @@ class SqlTable:
 
     def update_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
-        session = sa_session.Session(self.engine)
-        try:
-            sz.update.update_records_fast_session(sa_table, records, session)
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            raise e
+        sz.update.update_records_fast(sa_table, records, self.engine)
         
     def push(self, table: iTable) -> None:
         """
@@ -199,6 +203,7 @@ class SqlTable:
             self.delete_records(missing_records)
           
         matching_pk_records = self.matching_pk_records(table)
+        changed_records = self.changed_records(table, matching_pk_records)
         if matching_pk_records:
             self.update_records(matching_pk_records)
 
