@@ -76,11 +76,9 @@ class SqlTable:
     def primary_keys_different(self) -> bool:
         return set(self.old_primary_keys) != set(self.primary_keys)
 
-    def set_primary_keys(self, column_names: Iterable[str]) -> None:
-        for name in column_names:
-            ...
-            #alt.replace_primary_key()
-            #alt.create_primary_key()
+    def set_primary_keys(self, column_names: list[str]) -> None:
+        sqltable = sz.features.get_table(self.name, self.engine)
+        alt.replace_primary_keys(sqltable, column_names, self.engine)
 
     def pk_tuples(self, records: list[dict]) -> set[tuple]:
         pks = self.primary_keys
@@ -189,10 +187,8 @@ class SqlTable:
         # TODO: Check if data types match
             # no: change data types of columns
             
-        # TODO: Check if primary keys are the same
         if self.primary_keys_different():
-            # no: change primary keys
-            ...
+            self.set_primary_keys(self.primary_keys)
             
         new_records = self.new_records(table)
         if new_records:

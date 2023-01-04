@@ -1,4 +1,4 @@
 tinytable
-alterize>=0.0.3
+alterize>=0.0.4
 sessionize
 sqlalchemize>=0.0.5
