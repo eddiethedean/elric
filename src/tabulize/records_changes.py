@@ -64,3 +64,79 @@ def records_to_dict(
         tuple(val for key, val in record.items() if key in key_columns): record
             for record in records
         }
+
+
+"""
+Loop through chunks of both records.
+Find inserts, updates, and deleted records.
+For when both tables cant fit in memory.
+
+For inserts, need to note all unmatched records in new data.
+For updates, need to note all matched records with changes.
+For deletes, need to note all unmatched records in old data.
+"""
+def filter_record(
+    record: dict,
+    key_columns: list[str]
+) -> dict:
+    return {key: record[key] for key in key_columns}
+
+def matching_records(
+    record1: dict,
+    record2: dict,
+    key_columns: list[str]
+) -> bool:
+    f1 = filter_record(record1, key_columns)
+    f2 = filter_record(record2, key_columns)
+    return f1 == f2
+
+
+def find_record(
+    record1: dict,
+    records: list[dict],
+    key_columns: list[str],
+    not_found_indexes: set[int]
+) -> tuple[dict | str, int]:
+    for i in not_found_indexes:
+        record2 = records[i]
+        if matching_records(record1, record2, key_columns):
+            if record1 != record2:
+                return record2, i
+            else:
+                return 'Same', i
+    return 'Missing', -1
+        
+if __name__ == '__main__':
+    records1 = [{'id': 5, 'x': 11, 'y': 55},
+        {'id': 6, 'x': 11, 'y': 55},
+        {'id': 7, 'x': 22, 'y': 6},
+        {'id': 8, 'x': 33, 'y': 7},
+        {'id': 9, 'x': 44, 'y': 4},
+        {'id': 10, 'x': 55, 'y': 21}
+    ]
+            
+    records2 = [
+            {'id': 7, 'x': 22, 'y': 6},
+            {'id': 8, 'x': 55, 'y': 7},
+            {'id': 9, 'x': 44, 'y': 6},
+            {'id': 10, 'x': 55, 'y': 21},
+            {'id': 11, 'x': 99, 'y': 90}
+    ]
+    not_found_indexes = set(range(len(records2)))
+    missing_indexes: set[int] = set() 
+    updated_records: list[dict] = []
+    for index1, record1 in enumerate(records1):
+        results = find_record(record1, records2, ['id'], not_found_indexes)
+        if results == ('Missing', -1):
+            missing_indexes.add(index1) 
+        else:
+            not_found_indexes.remove(results[1])
+            if type(results[0]) is dict:
+                updated_records.append(results[0])
+                
+    inserted_records = [records2[i] for i in not_found_indexes]
+    deleted_records = [records1[i] for i in missing_indexes]
+                
+    print({'insert': inserted_records,
+    'update': updated_records,
+    'delete': deleted_records})
