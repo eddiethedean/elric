@@ -1,11 +1,13 @@
-from typing import Iterable
+from typing import Any, Iterable, Sequence
+
+Record = dict[str, Any]
 
 
 def records_changes(
-    records_old: Iterable[dict],
-    records_new: Iterable[dict],
-    key_columns: list[str]
-) -> dict[str, list]:
+    records_old: Iterable[Record],
+    records_new: Iterable[Record],
+    key_columns: Sequence[str]
+) -> dict[str, list[Record]]:
     """
     Find changes between original records (records_old)
     and new version of records (records_new).
@@ -53,9 +55,9 @@ def records_changes(
 
 
 def records_to_dict(
-    records: Iterable[dict],
-    key_columns: list[str]
-) -> dict[tuple, dict]:
+    records: Iterable[Record],
+    key_columns: Sequence[str]
+) -> dict[tuple, Record]:
     """
     Organizes a list of dict records into
     a dict of {tuple[key values]: record}
@@ -66,20 +68,12 @@ def records_to_dict(
         }
 
 
-"""
-Loop through chunks of both records.
-Find inserts, updates, and deleted records.
-For when both tables cant fit in memory.
-
-For inserts, need to note all unmatched records in new data.
-For updates, need to note all matched records with changes.
-For deletes, need to note all unmatched records in old data.
-"""
 def filter_record(
     record: dict,
     key_columns: list[str]
 ) -> dict:
     return {key: record[key] for key in key_columns}
+
 
 def matching_records(
     record1: dict,
@@ -90,21 +84,58 @@ def matching_records(
     f2 = filter_record(record2, key_columns)
     return f1 == f2
 
+from collections import namedtuple
+from typing import Iterable
+
+MatchStatus = namedtuple('MatchStatus', ['status', 'record', 'index'])
+
 
 def find_record(
     record1: dict,
-    records: list[dict],
+    records: Sequence[dict],
     key_columns: list[str],
     not_found_indexes: set[int]
-) -> tuple[dict | str, int]:
+) -> MatchStatus:
     for i in not_found_indexes:
         record2 = records[i]
         if matching_records(record1, record2, key_columns):
             if record1 != record2:
-                return record2, i
+                return MatchStatus('Update', record2, i)
             else:
-                return 'Same', i
-    return 'Missing', -1
+                return MatchStatus('Same', record1, i)
+    return MatchStatus('Missing', record1, -1)
+
+
+def find_record_changes_slow(
+    records1: Sequence[dict],
+    records2: Sequence[dict],
+    key_columns: list[str]
+) -> dict[str, list[dict]]:
+    """
+    Loop through both iterables of records.
+    Find inserts, updates, and deleted records.
+    For when both tables can't fit in memory.
+
+    For inserts, note all unmatched records in new data.
+    For updates, note all matched records with changes.
+    For deletes, note all unmatched records in old data.
+    """
+    not_found_indexes = set(range(len(records2)))
+    missing_indexes: set[int] = set() 
+    updated_records: list[dict] = []
+    for index1, record1 in enumerate(records1):
+        match = find_record(record1, records2, ['id'], not_found_indexes)
+        if match.status == 'Missing':
+            missing_indexes.add(index1) 
+        else:
+            not_found_indexes.remove(match.index)
+            if match.status == 'Update':
+                updated_records.append(match.record)
+    inserted_records = [records2[i] for i in not_found_indexes]
+    deleted_records = [records1[i] for i in missing_indexes]
+    return {'insert': inserted_records,
+            'update': updated_records,
+            'delete': deleted_records}
         
 if __name__ == '__main__':
     records1 = [{'id': 5, 'x': 11, 'y': 55},

@@ -6,18 +6,20 @@ import sqlalchemy.orm.session as sa_session
 import sqlalchemize as sz
 import alterize as alt
 
-Engine = sa.engine.Engine
+from tabulize.records_changes import records_changes
 
+Engine = sa.engine.Engine
+Record = dict[str, Any]
 
 class iTable(Protocol):
-    def iterrows(self) -> Generator[tuple, None, None]:
+    def iterrows(self) -> Generator[tuple[int, Record], None, None]:
         ...
 
     @property
-    def columns(self) -> Iterable[str]:
+    def columns(self) -> Sequence[str]:
         ...
 
-    def __getitem__(self, key) -> Iterable:
+    def __getitem__(self, key) -> Sequence:
         ...
 
 
@@ -80,83 +82,6 @@ class SqlTable:
         sqltable = sz.features.get_table(self.name, self.engine)
         alt.replace_primary_keys(sqltable, column_names, self.engine)
 
-    def pk_tuples(self, records: list[dict]) -> set[tuple]:
-        pks = self.primary_keys
-        return set(tuple(record[key] for key in pks) for record in records)
-
-    def old_pk_tuples(self) -> set[tuple]:
-        return self.pk_tuples(self.old_records)
-
-    def pk_record_from_tuple(self, pk_tuple: tuple) -> dict:
-        pks = self.primary_keys
-        return {key: val for key, val in zip(pks, pk_tuple)}
-
-    def pk_record_from_record(self, record: dict) -> dict:
-        pks = self.primary_keys
-        return {key: record[key] for key in pks}
-
-    def pk_records_from_tuples(self, pk_tuples) -> list[dict]:
-        return [self.pk_record_from_tuple(t) for t in pk_tuples]
-
-    def pk_records_from_records(self, records: list[dict]) -> list[dict]:
-        return [self.pk_record_from_record(record) for record in records]
-
-    def new_records(self, table: iTable) -> list[dict]:
-        """Check for new records in data"""
-        current_records = table_records(table)
-        if len(current_records) == 0:
-            return []
-        old_pk_tuples = self.old_pk_tuples()
-        current_pk_tuples = self.pk_tuples(current_records)
-        new_pk_tuples = current_pk_tuples - old_pk_tuples
-        if len(new_pk_tuples) == 0:
-            return []
-        new_pk_records = self.pk_records_from_tuples(new_pk_tuples)
-        return self.full_current_records_from_pk_records(new_pk_records, table)
-
-    def full_current_records_from_pk_records(self, pk_records: list[dict], table: iTable) -> list[dict]:
-        full_current_records = []
-        for current_record in table_records(table):
-            for pk_record in pk_records:
-                if self.pk_record_from_record(current_record) == pk_record:
-                    full_current_records.append(current_record)
-        return full_current_records
-
-    def missing_records(self, table: iTable) -> list[dict]:
-        """
-        Check for missing records in data
-        Return missing records primary key values.
-        """
-        current_records = table_records(table)
-        old_pk_tuples = self.old_pk_tuples()
-        current_pk_tuples = self.pk_tuples(current_records)
-        missing_pk_tuples = old_pk_tuples - current_pk_tuples
-        if len(missing_pk_tuples) == 0:
-            return []
-        return self.pk_records_from_tuples(missing_pk_tuples)
-
-    def matching_pk_records(self, table: iTable) -> list[dict]:
-        current_records = table_records(table)
-        if len(current_records) == 0:
-            return []
-        old_pk_tuples = self.old_pk_tuples()
-        current_pk_tuples = self.pk_tuples(current_records)
-        matching_pk_tuples = old_pk_tuples & current_pk_tuples
-        if len(matching_pk_tuples) == 0:
-            return []
-        matching_pk_records = self.pk_records_from_tuples(matching_pk_tuples)
-        return self.full_current_records_from_pk_records(matching_pk_records, table)
-
-    def changed_records(self, table, records) -> list[dict]:
-        """
-        Compare table's records to passed records.
-        Return records that have been changed.
-
-        Checks primary key values to find matches
-        then compares the rest of the record's values for changes.
-        """
-        ...
-
     def delete_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
         sz.delete.delete_records_by_values(sa_table, self.engine, records)
@@ -168,6 +93,9 @@ class SqlTable:
     def update_records(self, records: list[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
         sz.update.update_records_fast(sa_table, records, self.engine)
+
+    def record_changes(self, table: iTable) -> dict[str, list[Record]]:
+        return records_changes(self.old_records, table_records(table), self.primary_keys)
         
     def push(self, table: iTable) -> None:
         """
@@ -189,19 +117,19 @@ class SqlTable:
             
         if self.primary_keys_different():
             self.set_primary_keys(self.primary_keys)
-            
-        new_records = self.new_records(table)
+        
+        changes = self.record_changes(table)
+        new_records = changes['insert']
         if new_records:
             self.insert_records(new_records)
             
-        missing_records = self.missing_records(table)
+        missing_records = changes['delete']
         if missing_records:
             self.delete_records(missing_records)
           
-        matching_pk_records = self.matching_pk_records(table)
-        changed_records = self.changed_records(table, matching_pk_records)
-        if matching_pk_records:
-            self.update_records(matching_pk_records)
+        changed_records = changes['update']
+        if changed_records:
+            self.update_records(changed_records)
 
 
 def table_records(table: iTable) -> list[dict]:
