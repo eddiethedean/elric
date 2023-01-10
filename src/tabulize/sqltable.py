@@ -11,6 +11,7 @@ from tabulize.records_changes import records_changes
 Engine = sa.engine.Engine
 Record = dict[str, Any]
 
+
 class iTable(Protocol):
     def iterrows(self) -> Generator[tuple[int, Record], None, None]:
         ...
