@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional, Union
 import pandas as pd
 from sqlalchemy.engine import Engine
 
@@ -18,7 +18,7 @@ def to_sql_create(
     if_exists: str = 'fail',
     index: bool = False,
     dtype: Optional[dict] = None,
-    primary_key: str | list[str] = [],
+    primary_key: Union[str, List[str]] = [],
 ) -> None:
     """
     Create a new sql table from DataFrame features.

@@ -1,5 +1,5 @@
 tinytable
 tinytim>=1.10.2
-alterize>=0.0.4
+alterize>=0.0.6
 sessionize>=0.0.18
 sqlalchemize>=0.0.5

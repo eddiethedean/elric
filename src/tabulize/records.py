@@ -1,13 +1,13 @@
-from typing import Any, Iterable, Sequence
+from typing import Any, Dict, Iterable, List, Sequence, Set
 
-Record = dict[str, Any]
+Record = Dict[str, Any]
 
 
 def records_changes(
     records_old: Iterable[Record],
     records_new: Iterable[Record],
     key_columns: Sequence[str]
-) -> dict[str, list[Record]]:
+) -> Dict[str, List[Record]]:
     """
     Find changes between original records (records_old)
     and new version of records (records_new).
@@ -57,7 +57,7 @@ def records_changes(
 def records_to_dict(
     records: Iterable[Record],
     key_columns: Sequence[str]
-) -> dict[tuple, Record]:
+) -> Dict[tuple, Record]:
     """
     Organizes a list of dict records into
     a dict of {tuple[key values]: record}
@@ -70,7 +70,7 @@ def records_to_dict(
 
 def filter_record(
     record: dict,
-    key_columns: list[str]
+    key_columns: List[str]
 ) -> dict:
     return {key: record[key] for key in key_columns}
 
@@ -78,7 +78,7 @@ def filter_record(
 def matching_records(
     record1: dict,
     record2: dict,
-    key_columns: list[str]
+    key_columns: List[str]
 ) -> bool:
     f1 = filter_record(record1, key_columns)
     f2 = filter_record(record2, key_columns)
@@ -93,8 +93,8 @@ MatchStatus = namedtuple('MatchStatus', ['status', 'record', 'index'])
 def find_record(
     record1: dict,
     records: Sequence[dict],
-    key_columns: list[str],
-    not_found_indexes: set[int]
+    key_columns: List[str],
+    not_found_indexes: Set[int]
 ) -> MatchStatus:
     for i in not_found_indexes:
         record2 = records[i]
@@ -109,8 +109,8 @@ def find_record(
 def find_record_changes_slow(
     records1: Sequence[dict],
     records2: Sequence[dict],
-    key_columns: list[str]
-) -> dict[str, list[dict]]:
+    key_columns: List[str]
+) -> Dict[str, List[dict]]:
     """
     Loop through both iterables of records.
     Find inserts, updates, and deleted records.
@@ -154,8 +154,8 @@ if __name__ == '__main__':
             {'id': 11, 'x': 99, 'y': 90}
     ]
     not_found_indexes = set(range(len(records2)))
-    missing_indexes: set[int] = set() 
-    updated_records: list[dict] = []
+    missing_indexes: Set[int] = set() 
+    updated_records: List[dict] = []
     for index1, record1 in enumerate(records1):
         results = find_record(record1, records2, ['id'], not_found_indexes)
         if results == ('Missing', -1):

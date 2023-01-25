@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Dict, Iterable, List, Mapping, Sequence, Set
 
 import sqlalchemy as sa
 import sqlalchemize as sz
@@ -9,7 +9,7 @@ from tinytim.data import column_names
 from tabulize.records import records_changes
 
 Engine = sa.engine.Engine
-Record = dict[str, Any]
+Record = Dict[str, Any]
 DataMapping = Mapping[str, Sequence]
 
 
@@ -40,7 +40,7 @@ class SqlTable:
         """Change the name of the sql table to match current name."""
         alt.rename_table(self.old_name, self.name, self.engine)
 
-    def missing_columns(self, data: DataMapping) -> set[str]:
+    def missing_columns(self, data: DataMapping) -> Set[str]:
         """Check for missing columns in data that are in sql table"""
         current_columns = column_names(data)
         return set(self.old_column_names) - set(current_columns)
@@ -49,7 +49,7 @@ class SqlTable:
         for col_name in columns:
             alt.drop_column(self.name, col_name, self.engine)
 
-    def extra_columns(self, data: DataMapping) -> set[str]:
+    def extra_columns(self, data: DataMapping) -> Set[str]:
         """Check for extra columns in data that are not in sql table"""
         current_columns = column_names(data)
         return set(current_columns) - set(self.old_column_names)
@@ -70,23 +70,23 @@ class SqlTable:
     def primary_keys_different(self) -> bool:
         return set(self.old_primary_keys) != set(self.primary_keys)
 
-    def set_primary_keys(self, column_names: list[str]) -> None:
+    def set_primary_keys(self, column_names: List[str]) -> None:
         sqltable = sz.features.get_table(self.name, self.engine)
         alt.replace_primary_keys(sqltable, column_names, self.engine)
 
-    def delete_records(self, records: list[dict]) -> None:
+    def delete_records(self, records: List[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
         sz.delete.delete_records_by_values(sa_table, self.engine, records)
 
-    def insert_records(self, records: list[dict]) -> None:
+    def insert_records(self, records: List[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
         sz.insert.insert_records(sa_table, records, self.engine)
 
-    def update_records(self, records: list[dict]) -> None:
+    def update_records(self, records: List[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
         sz.update.update_records_fast(sa_table, records, self.engine)
 
-    def record_changes(self, records: Sequence[Record]) -> dict[str, list[Record]]:
+    def record_changes(self, records: Sequence[Record]) -> Dict[str, List[Record]]:
         return records_changes(self.old_records, records, self.primary_keys)
         
     def push(self, records: Sequence[Record]) -> None:
