@@ -1,12 +1,12 @@
 from typing import Any, Dict, Iterable, List, Mapping, Sequence, Set
 
 import sqlalchemy as sa
-import sqlalchemize as sz
-import alterize as alt
+import fullmetalalchemy as sz
+import transmutation as alt
 from tinytim.rows import row_dicts_to_data
 from tinytim.data import column_names
 
-from tabulize.records import records_changes
+from elric.records import records_changes
 
 Engine = sa.engine.Engine
 Record = Dict[str, Any]
@@ -76,7 +76,7 @@ class SqlTable:
 
     def delete_records(self, records: List[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
-        sz.delete.delete_records_by_values(sa_table, self.engine, records)
+        sz.delete.delete_records_by_values(sa_table, records, self.engine)
 
     def insert_records(self, records: List[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
@@ -84,7 +84,7 @@ class SqlTable:
 
     def update_records(self, records: List[dict]) -> None:
         sa_table = sz.features.get_table(self.name, self.engine)
-        sz.update.update_records_fast(sa_table, records, self.engine)
+        sz.update.update_records(sa_table, records, self.engine)
 
     def record_changes(self, records: Sequence[Record]) -> Dict[str, List[Record]]:
         return records_changes(self.old_records, records, self.primary_keys)

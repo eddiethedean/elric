@@ -1,8 +1,8 @@
 creds.py
 notebooks/
 
-tabulize.egg-info/
-tabulize/__pycache__/
+elric.egg-info/
+elric/__pycache__/
 dist/
 build/
 .vscode/

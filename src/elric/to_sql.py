@@ -1,5 +1,4 @@
 from typing import List, Optional, Union
-import pandas as pd
 from sqlalchemy.engine import Engine
 
 """
@@ -12,7 +11,7 @@ Alter existing sql table to match Pandas DataFrame metadata: to_sql_alter
 """
 
 def to_sql_create(
-    df: pd.DataFrame,   
+    df,   
     name: str,
     engine: Engine,
     if_exists: str = 'fail',
@@ -27,7 +26,7 @@ def to_sql_create(
 
 
 def to_sql_insert(
-    df: pd.DataFrame,   
+    df,   
     name: str,
     engine: Engine,
     index: bool = False,
